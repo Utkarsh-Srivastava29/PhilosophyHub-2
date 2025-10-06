@@ -174,7 +174,7 @@ export default function Seminars() {
     try {
       setLoading(true);
       setError("");
-      const response = await axios.get("http://localhost:5000/api/seminars");
+      const response = await axios.get(`${BACKEND_URI}/api/seminars`);
 
       // Ensure response.data is an array
       const seminarData = response.data;

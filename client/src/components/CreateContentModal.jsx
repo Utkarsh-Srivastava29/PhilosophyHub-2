@@ -37,7 +37,7 @@ const CreateContentModal = ({ isOpen, onClose, onContentCreated }) => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/content", {
+      const response = await fetch(`${BACKEND_URI}/api/content`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

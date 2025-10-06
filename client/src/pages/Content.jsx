@@ -10,6 +10,9 @@ import {
 } from "react-icons/fa";
 import ContentCard from "../components/ContentCard";
 import CreateContentModal from "../components/CreateContentModal";
+import { Toaster, toast } from "react-hot-toast";
+
+const BACKEND_URI = import.meta.env.VITE_BACKEND_URI || "http://localhost:5000";
 
 const trendingTopics = [
   "Existentialism",
@@ -37,7 +40,7 @@ const Content = () => {
 
   const fetchContents = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/content");
+      const response = await fetch(`${BACKEND_URI}/api/content`);
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched content data:", data);
@@ -117,7 +120,7 @@ const Content = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:5000/api/content/${contentId}/like`,
+        `${BACKEND_URI}/api/content/${contentId}/like`,
         {
           method: "POST",
           headers: {
@@ -303,6 +306,7 @@ const Content = () => {
         onClose={() => setIsCreateModalOpen(false)}
         onContentCreated={handleContentCreated}
       />
+      <Toaster position="top-right" />
     </div>
   );
 };
