@@ -23,13 +23,20 @@ console.log("PORT:", process.env.PORT);
 
 const app = express();
 
-const mongoUri =
-  process.env.MONGO_URI ||
-  // "mongodb+srv://testuser:testpassword123@cluster0.mongodb.net/philosophyhub?retryWrites=true&w=majority";
+const mongoUri = process.env.MONGO_URI;
+
+if (!mongoUri) {
+  console.error("ERROR: MONGO_URI is not defined in environment variables!");
+  console.error(
+    "Please set MONGO_URI in your .env file or Vercel environment variables"
+  );
+}
+
 console.log(
   "Using MongoDB URI:",
-  mongoUri.includes("mongodb+srv") ? "Atlas Cloud Database" : "Local Database"
+  mongoUri?.includes("mongodb+srv") ? "Atlas Cloud Database" : "Local Database"
 );
+
 connect(mongoUri)
   .then(() => {
     console.log("MongoDB Connected successfully");
@@ -45,8 +52,8 @@ const allowedOrigins = [
   "http://localhost:5174",
   "http://localhost:3000",
   "http://localhost:5000",
-  process.env.CLIENT_URL, 
-].filter(Boolean); 
+  process.env.CLIENT_URL,
+].filter(Boolean);
 
 app.use(
   cors({
@@ -67,7 +74,6 @@ app.use(
 );
 app.use(json());
 
-
 app.use((req, res, next) => {
   next();
 });
@@ -77,6 +83,23 @@ app.use("/api/content", contentRouter);
 app.use("/api/seminars", seminarRouter);
 app.use("/api/doubts", doubtRouter);
 app.use("/api/responses", responseRouter);
+
+// Root route
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "PhilosophyHub API is running!",
+    version: "1.0.0",
+    endpoints: {
+      test: "/api/test",
+      auth: "/api/auth",
+      content: "/api/content",
+      seminars: "/api/seminars",
+      doubts: "/api/doubts",
+      responses: "/api/responses",
+    },
+  });
+});
 
 // Test route
 app.get("/api/test", (req, res) => {
@@ -89,7 +112,27 @@ app.get("/api/test", (req, res) => {
       mongoExists: !!process.env.MONGO_URI,
       jwtExists: !!process.env.JWT_SECRET,
       port: process.env.PORT,
+      nodeEnv: process.env.NODE_ENV,
     },
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+    path: req.path,
+  });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Global error handler:", err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal server error",
+    error: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
 
