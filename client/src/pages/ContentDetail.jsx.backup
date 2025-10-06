@@ -1,0 +1,315 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const ContentDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isLiking, setIsLiking] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [isCommenting, setIsCommenting] = useState(false);
+
+  const backendUri = import.meta.env.VITE_BACKEND_URI || "http://localhost:5000";
+  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+
+  useEffect(() => {
+    fetchContent();
+  }, [id]);
+
+  const fetchContent = async () => {
+    try {
+      const response = await axios.get(`${backendUri}/api/content/${id}`);
+      if (response.data.success) {
+        setContent(response.data.content);
+      } else {
+        console.error("Failed to fetch content:", response.data.message);
+        navigate("/content");
+      }
+    } catch (error) {
+      console.error("Error fetching content:", error);
+      navigate("/content");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!currentUser) {
+      alert("Please login to like content");
+      return;
+    }
+
+    setIsLiking(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${backendUri}/api/content/${id}/like`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setContent(prev => ({
+          ...prev,
+          likeCount: response.data.likeCount,
+          isLiked: response.data.isLiked
+        }));
+      }
+    } catch (error) {
+      console.error("Error liking content:", error);
+      alert("Failed to like content");
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleComment = async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      alert("Please login to comment");
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
+    setIsCommenting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${backendUri}/api/content/${id}/comment`,
+        { text: newComment },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setContent(prev => ({
+          ...prev,
+          comments: [...prev.comments, response.data.comment],
+          commentCount: response.data.commentCount
+        }));
+        setNewComment("");
+      }
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      alert("Failed to add comment");
+    } finally {
+      setIsCommenting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading content...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Content not found
+          </h2>
+          <button
+            onClick={() => navigate("/content")}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            Back to Content
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isLiked = currentUser && content.likes.includes(currentUser._id);
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate("/content")}
+            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center"
+          >
+            ← Back to Content
+          </button>
+
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <div className="mb-6">
+              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                {content.category}
+              </span>
+            </div>
+
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">
+              {content.title}
+            </h1>
+
+            <div className="flex items-center mb-6 text-gray-600">
+              <span className="font-medium text-lg">{content.author.name}</span>
+              <span className="mx-3">•</span>
+              <span>{content.timeAgo}</span>
+            </div>
+
+            <p className="text-xl text-gray-700 mb-8 leading-relaxed">
+              {content.description}
+            </p>
+
+            {/* Action buttons */}
+            <div className="flex items-center space-x-8 pb-6 border-b border-gray-200">
+              <button
+                onClick={handleLike}
+                disabled={isLiking}
+                className={`flex items-center space-x-2 hover:text-red-600 transition-colors ${
+                  isLiked ? "text-red-600" : "text-gray-600"
+                }`}
+              >
+                <svg
+                  className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`}
+                  fill={isLiked ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+                <span className="font-medium">{content.likeCount} Likes</span>
+              </button>
+
+              <div className="flex items-center space-x-2 text-gray-600">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <span className="font-medium">
+                  {content.commentCount} Comments
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-2 text-gray-600">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                  />
+                </svg>
+                <span className="font-medium">{content.shares} Shares</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Full Content */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+          <div className="prose prose-lg max-w-none">
+            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+              {content.fullContent}
+            </div>
+          </div>
+        </div>
+
+        {/* Comments Section */}
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-6">
+            Comments ({content.commentCount})
+          </h3>
+
+          {/* Add Comment Form */}
+          {currentUser ? (
+            <form onSubmit={handleComment} className="mb-8">
+              <div className="flex space-x-4">
+                <div className="flex-1">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Share your thoughts..."
+                    rows="3"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isCommenting || !newComment.trim()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {isCommenting ? "Posting..." : "Post Comment"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="mb-8 p-4 bg-gray-100 rounded-lg text-center">
+              <p className="text-gray-600">Please login to leave a comment</p>
+            </div>
+          )}
+
+          {/* Comments List */}
+          <div className="space-y-6">
+            {content.comments.map((comment, index) => (
+              <div
+                key={index}
+                className="border-b border-gray-200 pb-4 last:border-b-0"
+              >
+                <div className="flex items-center mb-2">
+                  <span className="font-medium text-gray-800">
+                    {comment.author.name}
+                  </span>
+                  <span className="mx-2 text-gray-400">•</span>
+                  <span className="text-sm text-gray-600">
+                    {comment.timeAgo}
+                  </span>
+                </div>
+                <p className="text-gray-700">{comment.text}</p>
+              </div>
+            ))}
+
+            {content.comments.length === 0 && (
+              <p className="text-gray-500 text-center py-8">
+                No comments yet. Be the first to comment!
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ContentDetail;
