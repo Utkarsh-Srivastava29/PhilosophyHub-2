@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+const BACKEND_URI = import.meta.env.VITE_BACKEND_URI || "http://localhost:5000";
+
 export default function Seminars() {
   const [seminars, setSeminars] = useState([]);
   const [loading, setLoading] = useState(true);
