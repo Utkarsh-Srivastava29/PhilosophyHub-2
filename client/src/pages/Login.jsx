@@ -40,11 +40,11 @@ const Login = () => {
         await login(response.data.token, response.data.user);
 
         localStorage.setItem("token", response.data.token);
-        localStorage.setItem("userType", response.data.userType);
+        localStorage.setItem("userType", response.data.user.userType);
 
         toast.success("Login successful!");
         setTimeout(() => {
-          if (response.data.userType === "philosopher") {
+          if (response.data.user.userType === "philosopher") {
             navigate("/philosopher-profile");
           } else {
             navigate("/profile");
